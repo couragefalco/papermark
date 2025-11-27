@@ -23,11 +23,18 @@ const oAuthCallbackSchema = z.object({
 });
 
 export const GET = async (req: Request) => {
-  const env = getSlackEnv();
-
   let team: Pick<Team, "id" | "plan"> | null = null;
 
   try {
+    const env = getSlackEnv();
+
+    if (!env.SLACK_CLIENT_ID || !env.SLACK_CLIENT_SECRET) {
+      return NextResponse.json(
+        { error: "Slack integration is not configured" },
+        { status: 503 },
+      );
+    }
+
     const session = await getServerSession(authOptions);
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
