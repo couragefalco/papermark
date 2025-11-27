@@ -37,14 +37,20 @@ export const GET = async (req: Request) => {
 
     const { code, state } = oAuthCallbackSchema.parse(getSearchParams(req.url));
 
-    // Find workspace that initiated the Stripe app install
+    let teamId: string | null = null;
     const stateKey = `slack:install:state:${state}`;
-    const teamId = await redis.get<string>(stateKey);
+
+    if (redis) {
+      // Find workspace that initiated the Stripe app install
+      teamId = (await redis.get(stateKey)) as string | null;
+    }
 
     if (!teamId) {
       return NextResponse.json({ error: "Invalid state" }, { status: 400 });
     }
-    await redis.del(stateKey);
+    if (redis) {
+      await redis.del(stateKey);
+    }
 
     team = await prisma.team.findUniqueOrThrow({
       where: {

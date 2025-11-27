@@ -36,6 +36,13 @@ const CLEANUP_QUEUE_PREFIX = "cleanup_blobs:";
 const JOB_TTL = 60 * 60 * 24 * 3; // 3 days
 
 export class RedisJobStore {
+  private ensureRedis() {
+    if (!redis) {
+      return false;
+    }
+    return true;
+  }
+
   private getJobKey(jobId: string): string {
     return `${JOB_PREFIX}${jobId}`;
   }
@@ -55,6 +62,9 @@ export class RedisJobStore {
   async createJob(
     jobData: Omit<ExportJob, "id" | "createdAt" | "updatedAt">,
   ): Promise<ExportJob> {
+    if (!this.ensureRedis()) {
+      throw new Error("Redis is not configured");
+    }
     const jobId = nanoid();
     const now = new Date().toISOString();
 
@@ -70,22 +80,23 @@ export class RedisJobStore {
     const teamJobsKey = this.getTeamJobsKey(jobData.teamId);
 
     // Store job data with TTL
-    await redis.setex(jobKey, JOB_TTL, JSON.stringify(job));
+    await redis!.setex(jobKey, JOB_TTL, JSON.stringify(job));
 
     // Add to user's job list (sorted by creation time)
-    await redis.zadd(userJobsKey, { score: Date.now(), member: jobId });
-    await redis.expire(userJobsKey, JOB_TTL);
+    await redis!.zadd(userJobsKey, { score: Date.now(), member: jobId });
+    await redis!.expire(userJobsKey, JOB_TTL);
 
     // Add to team's job list (sorted by creation time)
-    await redis.zadd(teamJobsKey, { score: Date.now(), member: jobId });
-    await redis.expire(teamJobsKey, JOB_TTL);
+    await redis!.zadd(teamJobsKey, { score: Date.now(), member: jobId });
+    await redis!.expire(teamJobsKey, JOB_TTL);
 
     return job;
   }
 
   async getJob(jobId: string): Promise<ExportJob | null> {
+    if (!this.ensureRedis()) return null;
     const jobKey = this.getJobKey(jobId);
-    const jobData = await redis.get(jobKey);
+    const jobData = await redis!.get(jobKey);
 
     if (!jobData) {
       return null;
@@ -120,7 +131,7 @@ export class RedisJobStore {
     };
 
     const jobKey = this.getJobKey(jobId);
-    await redis.setex(jobKey, JOB_TTL, JSON.stringify(updatedJob));
+    await redis!.setex(jobKey, JOB_TTL, JSON.stringify(updatedJob));
 
     // If this update includes a blob URL, schedule it for cleanup
     if (updates.result?.startsWith("https://")) {
@@ -131,11 +142,12 @@ export class RedisJobStore {
   }
 
   async scheduleBlobForCleanup(blobUrl: string, jobId: string): Promise<void> {
+    if (!this.ensureRedis()) return;
     const cleanupTime = Date.now() + JOB_TTL * 1000; // Convert to milliseconds
     const cleanupQueueKey = this.getCleanupQueueKey();
 
     // Store blob URL with cleanup timestamp
-    await redis.zadd(cleanupQueueKey, {
+    await redis!.zadd(cleanupQueueKey, {
       score: cleanupTime,
       member: JSON.stringify({
         blobUrl,
@@ -148,11 +160,12 @@ export class RedisJobStore {
   async getBlobsForCleanup(
     beforeTimestamp?: number,
   ): Promise<Array<ExportJobCleanupItem>> {
+    if (!this.ensureRedis()) return [];
     const cleanupQueueKey = this.getCleanupQueueKey();
     const maxScore = beforeTimestamp || Date.now();
 
     // Get all items scheduled for cleanup before the specified timestamp
-    const items = await redis.zrange(cleanupQueueKey, 0, maxScore, {
+    const items = await redis!.zrange(cleanupQueueKey, 0, maxScore, {
       byScore: true,
     });
 
@@ -181,6 +194,7 @@ export class RedisJobStore {
     blobUrl: string,
     jobId: string,
   ): Promise<void> {
+    if (!this.ensureRedis()) return;
     const cleanupQueueKey = this.getCleanupQueueKey();
     const itemToRemove = JSON.stringify({
       blobUrl,
@@ -189,7 +203,7 @@ export class RedisJobStore {
     });
 
     // Remove the specific item from the cleanup queue
-    await redis.zrem(cleanupQueueKey, itemToRemove);
+    await redis!.zrem(cleanupQueueKey, itemToRemove);
   }
 
   async deleteJob(jobId: string): Promise<boolean> {
@@ -204,19 +218,20 @@ export class RedisJobStore {
 
     // Remove from all locations
     await Promise.all([
-      redis.del(jobKey),
-      redis.zrem(userJobsKey, jobId),
-      redis.zrem(teamJobsKey, jobId),
+      redis!.del(jobKey),
+      redis!.zrem(userJobsKey, jobId),
+      redis!.zrem(teamJobsKey, jobId),
     ]);
 
     return true;
   }
 
   async getUserJobs(userId: string, limit: number = 20): Promise<ExportJob[]> {
+    if (!this.ensureRedis()) return [];
     const userJobsKey = this.getUserJobsKey(userId);
 
     // Get job IDs sorted by creation time (newest first)
-    const jobIds = await redis.zrange(userJobsKey, 0, limit - 1, { rev: true });
+    const jobIds = await redis!.zrange(userJobsKey, 0, limit - 1, { rev: true });
 
     if (!jobIds.length) {
       return [];
@@ -234,10 +249,11 @@ export class RedisJobStore {
   }
 
   async getTeamJobs(teamId: string, limit: number = 20): Promise<ExportJob[]> {
+    if (!this.ensureRedis()) return [];
     const teamJobsKey = this.getTeamJobsKey(teamId);
 
     // Get job IDs sorted by creation time (newest first)
-    const jobIds = await redis.zrange(teamJobsKey, 0, limit - 1, { rev: true });
+    const jobIds = await redis!.zrange(teamJobsKey, 0, limit - 1, { rev: true });
 
     if (!jobIds.length) {
       return [];

@@ -82,9 +82,13 @@ const VerifyEmailChange = async ({ params: { token } }: PageProps) => {
 
   const currentUserId = (session.user as CustomUser).id;
 
-  const data = await redis.get<{ email: string; newEmail: string }>(
-    `email-change-request:user:${currentUserId}`,
-  );
+  if (!redis) {
+    return <NotFound />;
+  }
+
+  const data = (await redis.get(`email-change-request:user:${currentUserId}`)) as
+    | { email: string; newEmail: string }
+    | null;
 
   if (!data) return <NotFound />;
 
@@ -122,13 +126,17 @@ const VerifyEmailChange = async ({ params: { token } }: PageProps) => {
 };
 
 const deleteRequest = async (tokenFound: VerificationToken) => {
-  await Promise.all([
+  const promises = [
     prisma.verificationToken.delete({
       where: {
         token: tokenFound.token,
       },
     }),
+  ];
 
-    redis.del(`email-change-request:user:${tokenFound.identifier}`),
-  ]);
+  if (redis) {
+    promises.push(redis.del(`email-change-request:user:${tokenFound.identifier}`));
+  }
+
+  await Promise.all(promises);
 };

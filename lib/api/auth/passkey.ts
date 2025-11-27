@@ -10,6 +10,7 @@ export async function startServerPasskeyRegistration({
   session: Session;
 }) {
   if (!session) throw new Error("Not logged in");
+  if (!hanko) throw new Error("Passkey service not configured");
 
   const sessionUser = session.user as CustomUser;
 
@@ -36,6 +37,7 @@ export async function finishServerPasskeyRegistration({
   session: Session;
 }) {
   if (!session) throw new Error("Not logged in");
+  if (!hanko) throw new Error("Passkey service not configured");
 
   await hanko.registration.finalize(credential);
 
