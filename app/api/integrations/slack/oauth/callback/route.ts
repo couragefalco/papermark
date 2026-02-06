@@ -28,7 +28,12 @@ export const GET = async (req: Request) => {
   try {
     const env = getSlackEnv();
 
-    if (!env.SLACK_CLIENT_ID || !env.SLACK_CLIENT_SECRET) {
+    if (
+      !env.SLACK_CLIENT_ID ||
+      !env.SLACK_CLIENT_SECRET ||
+      !env.SLACK_INTEGRATION_ID ||
+      !env.SLACK_APP_INSTALL_URL
+    ) {
       return NextResponse.json(
         { error: "Slack integration is not configured" },
         { status: 503 },
