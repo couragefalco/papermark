@@ -10,6 +10,12 @@ export const uninstallSlackIntegration = async ({
   installation: InstalledIntegration;
 }) => {
   const env = getSlackEnv();
+
+  // Skip if Slack integration is not configured
+  if (!env.SLACK_CLIENT_ID || !env.SLACK_CLIENT_SECRET) {
+    return;
+  }
+
   const credentials = installation.credentials as SlackCredential;
 
   const controller = new AbortController();

@@ -37,6 +37,11 @@ export default async function handler(
 
   const env = getSlackEnv();
 
+  // Check if Slack integration is configured
+  if (!env.SLACK_INTEGRATION_ID) {
+    return res.status(404).json({ error: "Slack integration is not configured" });
+  }
+
   if (req.method === "GET") {
     try {
       const integration = await prisma.installedIntegration.findUnique({
