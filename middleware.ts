@@ -20,6 +20,12 @@ function isAnalyticsPath(path: string) {
 }
 
 function isCustomDomain(host: string) {
+  // Check if this is the self-hosted app domain (not a custom document sharing domain)
+  const appHost = process.env.NEXT_PUBLIC_APP_BASE_HOST;
+  if (appHost && host?.includes(appHost)) {
+    return false;
+  }
+
   return (
     (process.env.NODE_ENV === "development" &&
       (host?.includes(".local") || host?.includes("papermark.dev"))) ||
