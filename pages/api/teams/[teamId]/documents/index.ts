@@ -292,33 +292,24 @@ export default async function handle(
       userId = (session.user as CustomUser).id;
     }
 
-    // Validate request body using Zod schema for security
-    const validationResult = await documentUploadSchema.safeParseAsync(
-      req.body,
-    );
-
-    if (!validationResult.success) {
-      log({
-        message: `Document upload validation failed for teamId: ${teamId}. Errors: ${JSON.stringify(validationResult.error.errors)}`,
-        type: "error",
-      });
-      return res.status(400).json({
-        error: "Invalid document upload data",
-        details: validationResult.error.errors,
-      });
-    }
-
+    // Extract fields from request body
     const {
       name,
       url: fileUrl,
-      storageType,
+      storageType = "VERCEL_BLOB",
       numPages,
       type: fileType,
       folderPathName,
       contentType,
       createLink,
       fileSize,
-    } = validationResult.data;
+    } = req.body;
+
+    if (!name || !fileUrl) {
+      return res.status(400).json({
+        error: "Missing required fields: name and url",
+      });
+    }
 
     try {
       const team = await prisma.team.findUnique({
