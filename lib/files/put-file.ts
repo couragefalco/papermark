@@ -40,21 +40,15 @@ export const putFile = async ({
   numPages: number | undefined;
   fileSize: number | undefined;
 }> => {
-  const NEXT_PUBLIC_UPLOAD_TRANSPORT = process.env.NEXT_PUBLIC_UPLOAD_TRANSPORT;
+  const NEXT_PUBLIC_UPLOAD_TRANSPORT =
+    (process.env.NEXT_PUBLIC_UPLOAD_TRANSPORT || "vercel").trim();
 
   const { type, data, numPages, fileSize } = await match(
     NEXT_PUBLIC_UPLOAD_TRANSPORT,
   )
     .with("s3", async () => putFileInS3({ file, teamId, docId }))
     .with("vercel", async () => putFileInVercel(file))
-    .otherwise(() => {
-      return {
-        type: null,
-        data: null,
-        numPages: undefined,
-        fileSize: undefined,
-      };
-    });
+    .otherwise(async () => putFileInVercel(file));
 
   return { type, data, numPages, fileSize };
 };
