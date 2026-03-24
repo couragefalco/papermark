@@ -27,15 +27,8 @@ export default async function handler(
     return res.status(401).json({ message: "Unauthorized" });
   }
 
-  // Check if the API Key matches
-  if (!process.env.INTERNAL_API_KEY) {
-    log({
-      message: "INTERNAL_API_KEY environment variable is not set",
-      type: "error",
-    });
-    return res.status(500).json({ message: "Server configuration error" });
-  }
-  if (token !== process.env.INTERNAL_API_KEY) {
+  // Check if the API Key matches (skip if INTERNAL_API_KEY not configured for self-hosted)
+  if (process.env.INTERNAL_API_KEY && token !== process.env.INTERNAL_API_KEY) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
