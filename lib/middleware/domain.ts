@@ -32,9 +32,9 @@ export default async function DomainMiddleware(req: NextRequest) {
       );
     }
 
-    return NextResponse.redirect(
-      new URL("https://www.papermark.com/home", req.url),
-    );
+    const appBaseUrl =
+      process.env.NEXT_PUBLIC_BASE_URL || "https://www.papermark.com";
+    return NextResponse.redirect(new URL(`${appBaseUrl}/home`, req.url));
   }
 
   const url = req.nextUrl.clone();
