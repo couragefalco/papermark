@@ -65,6 +65,7 @@
     "@tailwindcss/typography": "^0.5.19",
     "@tanstack/react-table": "^8.21.3",
     "@teamhanko/passkeys-next-auth-provider": "^0.3.1",
+    "@tinybirdco/sdk": "^0.0.63",
     "@tiptap/extension-image": "^3.6.2",
     "@tiptap/extension-placeholder": "^3.6.2",
     "@tiptap/react": "^3.6.2",
