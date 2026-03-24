@@ -4,7 +4,20 @@ import { z } from "zod";
 import { VIDEO_EVENT_TYPES } from "../constants";
 import { WEBHOOK_TRIGGERS } from "../webhook/constants";
 
-const tb = new Tinybird({ token: process.env.TINYBIRD_TOKEN! });
+const tb = new Tinybird({ token: process.env.TINYBIRD_TOKEN || "" });
+
+// Wrap pipe calls to return empty data when pipes don't exist yet
+const origBuildPipe = tb.buildPipe.bind(tb);
+tb.buildPipe = function (opts: any) {
+  const pipeFn = origBuildPipe(opts);
+  return async (...args: any[]) => {
+    try {
+      return await (pipeFn as any)(...args);
+    } catch {
+      return { data: [] };
+    }
+  };
+} as any;
 
 export const getTotalAvgPageDuration = tb.buildPipe({
   pipe: "get_total_average_page_duration__v5",

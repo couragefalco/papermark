@@ -4,7 +4,20 @@ import { z } from "zod";
 import { VIDEO_EVENT_TYPES } from "../constants";
 import { WEBHOOK_TRIGGERS } from "../webhook/constants";
 
-const tb = new Tinybird({ token: process.env.TINYBIRD_TOKEN! });
+const tb = new Tinybird({ token: process.env.TINYBIRD_TOKEN || "" });
+
+// Wrap ingest calls to fail silently when datasources don't exist yet
+const origBuildIngest = tb.buildIngestEndpoint.bind(tb);
+tb.buildIngestEndpoint = function (opts: any) {
+  const ingestFn = origBuildIngest(opts);
+  return async (...args: any[]) => {
+    try {
+      return await (ingestFn as any)(...args);
+    } catch {
+      console.error(`Tinybird ingest to ${opts.datasource} failed`);
+    }
+  };
+} as any;
 
 export const publishPageView = tb.buildIngestEndpoint({
   datasource: "page_views__v3",
