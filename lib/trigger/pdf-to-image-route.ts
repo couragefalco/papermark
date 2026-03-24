@@ -1,5 +1,7 @@
 import { logger, task } from "@trigger.dev/sdk/v3";
 
+import { DocumentStorageType } from "@prisma/client";
+
 import { getFile } from "@/lib/files/get-file";
 import { updateStatus } from "@/lib/utils/generate-trigger-status";
 
@@ -37,7 +39,7 @@ export const convertPdfToImageRoute = task({
 
     const documentVersion = (await dvResponse.json()) as {
       file: string;
-      storageType: string;
+      storageType: DocumentStorageType;
       numPages: number | null;
     };
 
