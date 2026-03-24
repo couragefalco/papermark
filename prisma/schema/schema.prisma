@@ -51,7 +51,7 @@ model User {
   domains        Domain[]
   chats          Chat[]
   contactId      String?
-  plan           String     @default("free")
+  plan           String     @default("datarooms-premium")
   stripeId       String?    @unique // Stripe subscription / customer ID
   subscriptionId String?    @unique // Stripe subscription ID
   startsAt       DateTime? // Stripe subscription start date
