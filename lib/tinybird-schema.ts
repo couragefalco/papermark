@@ -162,79 +162,79 @@ export const pm_click_events__v1 = defineDatasource("pm_click_events__v1", {
 
 export const get_total_average_page_duration__v5 = defineEndpoint("get_total_average_page_duration__v5", {
   params: { documentId: p.string(), excludedLinkIds: p.string().optional(""), excludedViewIds: p.string().optional(""), since: p.int64().optional(0) },
-  nodes: [node({ sql: `SELECT versionNumber, pageNumber, avg(duration) as avg_duration FROM page_views__v3 WHERE documentId = {{String(documentId)}} AND time >= {{Int64(since, 0)}} AND ({{String(excludedViewIds, '')}} = '' OR NOT has(splitByChar(',', {{String(excludedViewIds, '')}}), viewId)) AND ({{String(excludedLinkIds, '')}} = '' OR NOT has(splitByChar(',', {{String(excludedLinkIds, '')}}), linkId)) GROUP BY versionNumber, pageNumber ORDER BY versionNumber DESC, pageNumber ASC` })],
+  nodes: [node({ name: "get_total_average_page_duration__v5_node", sql: `SELECT versionNumber, pageNumber, avg(duration) as avg_duration FROM page_views__v3 WHERE documentId = {{String(documentId)}} AND time >= {{Int64(since, 0)}} AND ({{String(excludedViewIds, '')}} = '' OR NOT has(splitByChar(',', {{String(excludedViewIds, '')}}), viewId)) AND ({{String(excludedLinkIds, '')}} = '' OR NOT has(splitByChar(',', {{String(excludedLinkIds, '')}}), linkId)) GROUP BY versionNumber, pageNumber ORDER BY versionNumber DESC, pageNumber ASC` })],
   output: { versionNumber: t.uint16(), pageNumber: t.string(), avg_duration: t.float64() },
 });
 
 export const get_page_duration_per_view__v5 = defineEndpoint("get_page_duration_per_view__v5", {
   params: { documentId: p.string(), viewId: p.string(), since: p.int64().optional(0) },
-  nodes: [node({ sql: `SELECT pageNumber, sum(duration) as sum_duration FROM page_views__v3 WHERE documentId = {{String(documentId)}} AND viewId = {{String(viewId)}} AND time >= {{Int64(since, 0)}} GROUP BY pageNumber ORDER BY pageNumber ASC` })],
+  nodes: [node({ name: "get_page_duration_per_view__v5_node", sql: `SELECT pageNumber, sum(duration) as sum_duration FROM page_views__v3 WHERE documentId = {{String(documentId)}} AND viewId = {{String(viewId)}} AND time >= {{Int64(since, 0)}} GROUP BY pageNumber ORDER BY pageNumber ASC` })],
   output: { pageNumber: t.string(), sum_duration: t.float64() },
 });
 
 export const get_total_document_duration__v1 = defineEndpoint("get_total_document_duration__v1", {
   params: { documentId: p.string(), excludedLinkIds: p.string().optional(""), excludedViewIds: p.string().optional(""), since: p.int64().optional(0) },
-  nodes: [node({ sql: `SELECT sum(duration) as sum_duration FROM page_views__v3 WHERE documentId = {{String(documentId)}} AND time >= {{Int64(since, 0)}} AND ({{String(excludedViewIds, '')}} = '' OR NOT has(splitByChar(',', {{String(excludedViewIds, '')}}), viewId)) AND ({{String(excludedLinkIds, '')}} = '' OR NOT has(splitByChar(',', {{String(excludedLinkIds, '')}}), linkId))` })],
+  nodes: [node({ name: "get_total_document_duration__v1_node", sql: `SELECT sum(duration) as sum_duration FROM page_views__v3 WHERE documentId = {{String(documentId)}} AND time >= {{Int64(since, 0)}} AND ({{String(excludedViewIds, '')}} = '' OR NOT has(splitByChar(',', {{String(excludedViewIds, '')}}), viewId)) AND ({{String(excludedLinkIds, '')}} = '' OR NOT has(splitByChar(',', {{String(excludedLinkIds, '')}}), linkId))` })],
   output: { sum_duration: t.float64() },
 });
 
 export const get_total_link_duration__v1 = defineEndpoint("get_total_link_duration__v1", {
   params: { linkId: p.string(), documentId: p.string(), excludedViewIds: p.string().optional(""), since: p.int64().optional(0) },
-  nodes: [node({ sql: `SELECT sum(duration) as sum_duration, uniq(viewId) as view_count FROM page_views__v3 WHERE documentId = {{String(documentId)}} AND linkId = {{String(linkId)}} AND time >= {{Int64(since, 0)}} AND ({{String(excludedViewIds, '')}} = '' OR NOT has(splitByChar(',', {{String(excludedViewIds, '')}}), viewId))` })],
+  nodes: [node({ name: "get_total_link_duration__v1_node", sql: `SELECT sum(duration) as sum_duration, uniq(viewId) as view_count FROM page_views__v3 WHERE documentId = {{String(documentId)}} AND linkId = {{String(linkId)}} AND time >= {{Int64(since, 0)}} AND ({{String(excludedViewIds, '')}} = '' OR NOT has(splitByChar(',', {{String(excludedViewIds, '')}}), viewId))` })],
   output: { sum_duration: t.float64(), view_count: t.uint64() },
 });
 
 export const get_total_viewer_duration__v1 = defineEndpoint("get_total_viewer_duration__v1", {
   params: { viewIds: p.string(), since: p.int64().optional(0) },
-  nodes: [node({ sql: `SELECT sum(duration) as sum_duration FROM page_views__v3 WHERE has(splitByChar(',', {{String(viewIds)}}), viewId) AND time >= {{Int64(since, 0)}}` })],
+  nodes: [node({ name: "get_total_viewer_duration__v1_node", sql: `SELECT sum(duration) as sum_duration FROM page_views__v3 WHERE has(splitByChar(',', {{String(viewIds)}}), viewId) AND time >= {{Int64(since, 0)}}` })],
   output: { sum_duration: t.float64() },
 });
 
 export const get_useragent_per_view__v2 = defineEndpoint("get_useragent_per_view__v2", {
   params: { documentId: p.string(), viewId: p.string(), since: p.int64().optional(0) },
-  nodes: [node({ sql: `SELECT country, city, browser, os, device FROM page_views__v3 WHERE documentId = {{String(documentId)}} AND viewId = {{String(viewId)}} LIMIT 1` })],
+  nodes: [node({ name: "get_useragent_per_view__v2_node", sql: `SELECT country, city, browser, os, device FROM page_views__v3 WHERE documentId = {{String(documentId)}} AND viewId = {{String(viewId)}} LIMIT 1` })],
   output: { country: t.string(), city: t.string(), browser: t.string(), os: t.string(), device: t.string() },
 });
 
 export const get_useragent_per_view__v3 = defineEndpoint("get_useragent_per_view__v3", {
   params: { viewId: p.string() },
-  nodes: [node({ sql: `SELECT country, city, browser, os, device FROM page_views__v3 WHERE viewId = {{String(viewId)}} LIMIT 1` })],
+  nodes: [node({ name: "get_useragent_per_view__v3_node", sql: `SELECT country, city, browser, os, device FROM page_views__v3 WHERE viewId = {{String(viewId)}} LIMIT 1` })],
   output: { country: t.string(), city: t.string(), browser: t.string(), os: t.string(), device: t.string() },
 });
 
 export const get_total_dataroom_duration__v1 = defineEndpoint("get_total_dataroom_duration__v1", {
   params: { dataroomId: p.string(), since: p.int64().optional(0) },
-  nodes: [node({ sql: `SELECT viewId, sum(duration) as sum_duration FROM page_views__v3 WHERE dataroomId = {{String(dataroomId)}} AND time >= {{Int64(since, 0)}} GROUP BY viewId` })],
+  nodes: [node({ name: "get_total_dataroom_duration__v1_node", sql: `SELECT viewId, sum(duration) as sum_duration FROM page_views__v3 WHERE dataroomId = {{String(dataroomId)}} AND time >= {{Int64(since, 0)}} GROUP BY viewId` })],
   output: { viewId: t.string(), sum_duration: t.float64() },
 });
 
 export const get_document_duration_per_viewer__v1 = defineEndpoint("get_document_duration_per_viewer__v1", {
   params: { documentId: p.string(), viewIds: p.string() },
-  nodes: [node({ sql: `SELECT sum(duration) as sum_duration FROM page_views__v3 WHERE documentId = {{String(documentId)}} AND has(splitByChar(',', {{String(viewIds)}}), viewId)` })],
+  nodes: [node({ name: "get_document_duration_per_viewer__v1_node", sql: `SELECT sum(duration) as sum_duration FROM page_views__v3 WHERE documentId = {{String(documentId)}} AND has(splitByChar(',', {{String(viewIds)}}), viewId)` })],
   output: { sum_duration: t.float64() },
 });
 
 export const get_webhook_events__v1 = defineEndpoint("get_webhook_events__v1", {
   params: { webhookId: p.string() },
-  nodes: [node({ sql: `SELECT event_id, webhook_id, message_id, event, url, http_status, request_body, response_body FROM webhook_events__v1 WHERE webhook_id = {{String(webhookId)}} ORDER BY event_id DESC` })],
+  nodes: [node({ name: "get_webhook_events__v1_node", sql: `SELECT event_id, webhook_id, message_id, event, url, http_status, request_body, response_body FROM webhook_events__v1 WHERE webhook_id = {{String(webhookId)}} ORDER BY event_id DESC` })],
   output: { event_id: t.string(), webhook_id: t.string(), message_id: t.string(), event: t.string(), url: t.string(), http_status: t.int32(), request_body: t.string(), response_body: t.string() },
 });
 
 export const get_video_events_by_document__v1 = defineEndpoint("get_video_events_by_document__v1", {
   params: { document_id: p.string() },
-  nodes: [node({ sql: `SELECT timestamp, view_id, event_type, start_time, end_time, playback_rate, volume, is_muted, is_focused, is_fullscreen FROM video_views__v1 WHERE document_id = {{String(document_id)}} ORDER BY timestamp ASC` })],
+  nodes: [node({ name: "get_video_events_by_document__v1_node", sql: `SELECT timestamp, view_id, event_type, start_time, end_time, playback_rate, volume, is_muted, is_focused, is_fullscreen FROM video_views__v1 WHERE document_id = {{String(document_id)}} ORDER BY timestamp ASC` })],
   output: { timestamp: t.string(), view_id: t.string(), event_type: t.string(), start_time: t.float64(), end_time: t.float64(), playback_rate: t.float64(), volume: t.float64(), is_muted: t.uint8(), is_focused: t.uint8(), is_fullscreen: t.uint8() },
 });
 
 export const get_video_events_by_view__v1 = defineEndpoint("get_video_events_by_view__v1", {
   params: { document_id: p.string(), view_id: p.string() },
-  nodes: [node({ sql: `SELECT timestamp, event_type, start_time, end_time FROM video_views__v1 WHERE document_id = {{String(document_id)}} AND view_id = {{String(view_id)}} ORDER BY timestamp ASC` })],
+  nodes: [node({ name: "get_video_events_by_view__v1_node", sql: `SELECT timestamp, event_type, start_time, end_time FROM video_views__v1 WHERE document_id = {{String(document_id)}} AND view_id = {{String(view_id)}} ORDER BY timestamp ASC` })],
   output: { timestamp: t.string(), event_type: t.string(), start_time: t.float64(), end_time: t.float64() },
 });
 
 export const get_click_events_by_view__v1 = defineEndpoint("get_click_events_by_view__v1", {
   params: { document_id: p.string(), view_id: p.string() },
-  nodes: [node({ sql: `SELECT timestamp, document_id, dataroom_id, view_id, page_number, version_number, href FROM click_events__v1 WHERE document_id = {{String(document_id)}} AND view_id = {{String(view_id)}} ORDER BY timestamp ASC` })],
+  nodes: [node({ name: "get_click_events_by_view__v1_node", sql: `SELECT timestamp, document_id, dataroom_id, view_id, page_number, version_number, href FROM click_events__v1 WHERE document_id = {{String(document_id)}} AND view_id = {{String(view_id)}} ORDER BY timestamp ASC` })],
   output: { timestamp: t.string(), document_id: t.string(), dataroom_id: t.string().nullable(), view_id: t.string(), page_number: t.string(), version_number: t.int32(), href: t.string() },
 });
 
