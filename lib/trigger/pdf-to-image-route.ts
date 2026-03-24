@@ -1,7 +1,6 @@
 import { logger, task } from "@trigger.dev/sdk/v3";
 
 import { getFile } from "@/lib/files/get-file";
-import prisma from "@/lib/prisma";
 import { updateStatus } from "@/lib/utils/generate-trigger-status";
 
 type ConvertPdfToImagePayload = {
@@ -11,6 +10,12 @@ type ConvertPdfToImagePayload = {
   versionNumber?: number;
 };
 
+const baseUrl = () => process.env.NEXT_PUBLIC_BASE_URL;
+const authHeaders = () => ({
+  "Content-Type": "application/json",
+  Authorization: `Bearer ${process.env.INTERNAL_API_KEY}`,
+});
+
 export const convertPdfToImageRoute = task({
   id: "convert-pdf-to-image-route",
   run: async (payload: ConvertPdfToImagePayload) => {
@@ -18,24 +23,23 @@ export const convertPdfToImageRoute = task({
 
     updateStatus({ progress: 0, text: "Initializing..." });
 
-    // 1. get file url from document version
-    const documentVersion = await prisma.documentVersion.findUnique({
-      where: {
-        id: documentVersionId,
-      },
-      select: {
-        file: true,
-        storageType: true,
-        numPages: true,
-      },
-    });
+    // 1. get file url from document version via internal API
+    const dvResponse = await fetch(
+      `${baseUrl()}/api/internal/document-version?id=${documentVersionId}`,
+      { headers: authHeaders() },
+    );
 
-    // if documentVersion is null, log error and return
-    if (!documentVersion) {
-      logger.error("File not found", { payload });
+    if (!dvResponse.ok) {
+      logger.error("Document version not found", { payload });
       updateStatus({ progress: 0, text: "Document not found" });
       return;
     }
+
+    const documentVersion = (await dvResponse.json()) as {
+      file: string;
+      storageType: string;
+      numPages: number | null;
+    };
 
     logger.info("Document version", { documentVersion });
     updateStatus({ progress: 10, text: "Retrieving file..." });
@@ -62,14 +66,11 @@ export const convertPdfToImageRoute = task({
       logger.info("Sending file to api/get-pages endpoint");
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BASE_URL}/api/mupdf/get-pages`,
+        `${baseUrl()}/api/mupdf/get-pages`,
         {
           method: "POST",
           body: JSON.stringify({ url: signedUrl }),
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${process.env.INTERNAL_API_KEY}`,
-          },
+          headers: authHeaders(),
         },
       );
 
@@ -116,7 +117,7 @@ export const convertPdfToImageRoute = task({
       try {
         // send page number to api/convert-page endpoint in a task and get back page img url
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_BASE_URL}/api/mupdf/convert-page`,
+          `${baseUrl()}/api/mupdf/convert-page`,
           {
             method: "POST",
             body: JSON.stringify({
@@ -125,10 +126,7 @@ export const convertPdfToImageRoute = task({
               url: signedUrl,
               teamId: teamId,
             }),
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${process.env.INTERNAL_API_KEY}`,
-            },
+            headers: authHeaders(),
           },
         );
 
@@ -187,43 +185,32 @@ export const convertPdfToImageRoute = task({
       return;
     }
 
-    // 5. after all pages are uploaded, update document version to hasPages = true
-    await prisma.documentVersion.update({
-      where: {
-        id: documentVersionId,
+    // 5. after all pages are uploaded, mark document version as processed via internal API
+    const markResponse = await fetch(
+      `${baseUrl()}/api/internal/document-version`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          action: "markProcessed",
+          documentVersionId,
+          documentId,
+          numPages,
+          versionNumber,
+        }),
+        headers: authHeaders(),
       },
-      data: {
-        numPages: numPages,
-        hasPages: true,
-        isPrimary: true,
-      },
-      select: {
-        id: true,
-        hasPages: true,
-        isPrimary: true,
-      },
-    });
+    );
+
+    if (!markResponse.ok) {
+      logger.error("Failed to update document version", { payload });
+      throw new Error("Failed to update document version");
+    }
 
     logger.info("Enabling pages");
     updateStatus({
       progress: 90,
       text: "Enabling pages...",
     });
-
-    if (versionNumber) {
-      // after all pages are uploaded, update all other versions to be not primary
-      await prisma.documentVersion.updateMany({
-        where: {
-          documentId: documentId,
-          versionNumber: {
-            not: versionNumber,
-          },
-        },
-        data: {
-          isPrimary: false,
-        },
-      });
-    }
 
     logger.info("Revalidating link");
     updateStatus({
